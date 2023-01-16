@@ -1,0 +1,278 @@
+---
+title: "An Analysis of the NBA's Change in Lineups"
+author: "Max Sleek"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document: default
+---
+
+```{r SETUP, include = FALSE}
+# Import Data Below
+library(tidyverse)
+library(car)
+library(xtable)
+
+all_lineups <- read_csv("AllLineupsFrom04To22.csv")
+all_playoff_lineups <- read_csv("AllPlayoffLineupsFrom04To22.csv")
+all_reg_lineups <- read_csv("AllRegSeasonLineupsFrom04To22.csv")
+all_players <- read_csv("TotalPlayersFrom04To22.csv")
+all_players_with_dups <- read_csv("EachYearPlayersFrom04To22.csv")
+all_reg_lineups_minus_averages = read_csv("AllRegSeasonLineupsMinusAverages.csv")
+all_playoff_lineups_minus_averages = read_csv("AllPlayoffLineupsMinusAverages.csv")
+league_averages <- filter(all_reg_lineups, Team == "League Averages") %>% select_if(~ !any(is.na(.)))
+```
+
+  Basketball is one of the most lineup-dependent team sports in the world since each team can only have 5 players on the court at once. When working with basketball analytics, lineup data is crucial to understanding what makes a basketball team successful, and what players to keep on the court. Consequently, I have centered this project around deep lineup analytics in the NBA. I look to provide a rigorous model for the most important factors in predicting lineup success while also exploring and visualizing how the definition of success has changed over the past 19 NBA seasons. 
+  However, before I started, I had to first decide how to measure the success of a particular lineup. I chose to use efficiency differential, which is a lineup’s offensive points per possession minus its defensive points allowed per possession. The database with the most widely available data around efficiency differential was CleaningTheGlass.com. This website was created by Ben Falk, a notable statistician and data scientist who previously worked with several NBA teams. The data itself was collected by sportradar, which is renowned for its large databases of major sports. This lineup data is available for every year of NBA basketball since 2004 and includes several divisions of basketball statistics including efficiency differential (points scored per offensive possession - points allowed per defensive possession), shooting efficiency, shooting locations, halfcourt offense, transition/fastbreaks, and more -- for both offense and defense. As for the observations in my dataset, each row represents a single lineup that played at least 100 possessions. In total, there are 6,284 lineups since 2004 that met this requirement. Here is an example of some of the variables I used for lineup data (To view the dull data set and all 114 variables, see my scripts):
+
+```{r, echo = FALSE}
+head(all_reg_lineups_minus_averages)[,c(4, 45, 47, 49, 51)]
+```
+
+  Cleaning The Glass includes the names of all 5 players in the lineup, but doesn’t include any biographical information about them (age, height, experience, etc). To remedy this, I scraped the players’ biographical information from NBA.com and ran a match function to combine the two datasets. Please look at my lineup formations document to see how I formed my data set, cleaned it, and prepared it for analysis; This was a large part of my project and showcases a lot of my R skills. Once I accomplished this, my data for each player in each lineup was as follows:
+
+```{r, echo = FALSE}
+head(all_reg_lineups_minus_averages)[,4:11]
+```
+
+  I began with evaluating the changes in the league. It is virtually common knowledge that the NBA is moving away from the mid-range shot and moving toward the three-point shot. When we compare 2004 and 2022, we can see this massive increase in frequency. 
+
+```{r, echo = FALSE}
+ggplot(all_reg_lineups_minus_averages, aes(x = `OFFENSE..All.Three.Frequency`)) + 
+  geom_histogram(data = filter(all_reg_lineups_minus_averages, Year == 2004), fill = "red", alpha = 0.5) +
+  geom_histogram(data = filter(all_reg_lineups_minus_averages, Year == 2022), fill = "blue", alpha = 0.5)  +
+  labs(title = "3 Proint Frequency, 2004 vs. 2022", 
+       subtitle = "Red = 2003-04, Blue = 2021-22",
+       caption = "Made by Max Sleek",
+       x = "Lineup 3 Point Frequency",
+       y = "Number of Lineups") +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(color = "#0099f8", size = 12, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(color = "red", face = "bold.italic", hjust = 0.5),
+    plot.caption = element_text(color = "white", face = "italic"),
+    axis.title.x = element_text(color="white", face = "bold"),
+    axis.title.y = element_text(color="white", face = "bold"),
+    axis.text.x = element_text(color="white", face = "bold"),
+    axis.text.y = element_text(color="white", face = "bold"),
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "black", color = "red"),
+    plot.background = element_rect(fill = "black"))
+```
+
+  However, I wanted to visualize the change in distribution over the past 19 seasons. As seen below, it appears the frequency of mid-range shots in lineups was steadily decreasing after 2004, but the increase in 3-point frequency did not begin its soar until around 2014 (coincidentally, the beginning of Stephen Curry’s influence).
+
+```{r, echo = FALSE, warning = FALSE}
+ggplot(league_averages, aes(x = Year)) +
+  geom_point(data = league_averages, col = "red", aes(y = OFFENSE..Rim.Frequency)) +
+  geom_point(data = league_averages, col = "blue", aes(y = OFFENSE..All.Mid.Frequency)) +
+  geom_point(data = league_averages, col = "orange", aes(y = OFFENSE..All.Three.Frequency)) +
+  labs(title = "Field Goal Frequency by Year",
+       subtitle = "Red = Rim Frquency, Blue = Mid Range Frequency, Orange = Three Frequency",
+       caption = "Made by Max Sleek",
+       x = "Year",
+       y = "Frequency") +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(color = "#0099f8", size = 12, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(color = "red", face = "bold.italic", hjust = 0.5),
+    plot.caption = element_text(color = "white", face = "italic"),
+    axis.title.x = element_text(color="white", face = "bold"),
+    axis.title.y = element_text(color="white", face = "bold"),
+    axis.text.x = element_text(color="white", face = "bold"),
+    axis.text.y = element_text(color="white", face = "bold"),
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "black", color = "red"),
+    plot.background = element_rect(fill = "black"))
+```
+ 
+ This is only a surface-level analysis though. Firstly, has the change in the distribution of shots impacted the efficiency differential of lineups throughout the past 19 seasons? To visualize this, I plotted the 3-point percentage by the efficiency differential of all lineups from 2004 and 2022. As seen below, there is a much clearer correlation between shooting percentage and the success of lineups in 2022 than in 2004. In so many words, teams that shoot well in 2022 are much more likely to have a high-efficiency differential (and vice versa). In 2004, lineups that were not centered around shooting threes could have much more success than they would today. This is clearly represented by the heatmaps I plotted comparing 2004 and 2022.
+
+```{r, echo = FALSE, warning = FALSE}
+ggplot(all_reg_lineups_minus_averages, aes(x = `OFFENSE..All.Three.FG.`, y = Diff)) +
+  geom_point(data = filter(all_reg_lineups_minus_averages, Year == 2004), col = "red", alpha = 0.5) +
+    geom_smooth(data = filter(all_reg_lineups_minus_averages, Year == 2004), method = lm, col = "red") +
+  geom_point(data = filter(all_reg_lineups_minus_averages, Year == 2022), col = "blue", alpha = 0.5) +
+    geom_smooth(data = filter(all_reg_lineups_minus_averages, Year == 2022), method = lm, col = "blue") +
+  labs(title = "3 Point Percentage Vs. Efficiency Differential, 2004 vs. 2022", 
+       subtitle = "Red = 2003-04, Blue = 2021-22",
+       caption = "Made by Max Sleek",
+       x = "Lineup 3 Point Percentage",
+       y = "Efficiency Differential") +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(color = "#0099f8", size = 12, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(color = "red", face = "bold.italic", hjust = 0.5),
+    plot.caption = element_text(color = "white", face = "italic"),
+    axis.title.x = element_text(color="white", face = "bold"),
+    axis.title.y = element_text(color="white", face = "bold"),
+    axis.text.x = element_text(color="white", face = "bold"),
+    axis.text.y = element_text(color="white", face = "bold"),
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "black", color = "red"),
+    plot.background = element_rect(fill = "black"))
+
+ggplot(all_reg_lineups_minus_averages, aes(x = `OFFENSE..All.Three.FG.`, y = Diff)) +
+  geom_density2d_filled(data = filter(all_reg_lineups_minus_averages, Year == 2004)) +
+  labs(title = "3 Point Percentage Vs. Efficiency Differential", 
+       subtitle = "2004",
+       caption = "Made by Max Sleek",
+       x = "Lineup 3 Point Percentage",
+       y = "Efficiency Differential") +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(color = "#0099f8", size = 12, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(color = "red", face = "bold.italic", hjust = 0.5),
+    plot.caption = element_text(color = "white", face = "italic"),
+    axis.title.x = element_text(color="white", face = "bold"),
+    axis.title.y = element_text(color="white", face = "bold"),
+    axis.text.x = element_text(color="white", face = "bold"),
+    axis.text.y = element_text(color="white", face = "bold"),
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "black", color = "red"),
+    plot.background = element_rect(fill = "black"))
+
+ggplot(all_reg_lineups_minus_averages, aes(x = `OFFENSE..All.Three.FG.`, y = Diff)) +
+  geom_density2d_filled(data = filter(all_reg_lineups_minus_averages, Year == 2022)) +
+  labs(title = "3 Point Percentage Vs. Efficiency Differential", 
+       subtitle = "2022",
+       caption = "Made by Max Sleek",
+       x = "Lineup 3 Point Percentage",
+       y = "Efficiency Differential") +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(color = "#0099f8", size = 12, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(color = "red", face = "bold.italic", hjust = 0.5),
+    plot.caption = element_text(color = "white", face = "italic"),
+    axis.title.x = element_text(color="white", face = "bold"),
+    axis.title.y = element_text(color="white", face = "bold"),
+    axis.text.x = element_text(color="white", face = "bold"),
+    axis.text.y = element_text(color="white", face = "bold"),
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "black", color = "red"),
+    plot.background = element_rect(fill = "black"))
+```
+
+  Shot distribution is only one of the ways the NBA has evolved over the past 20 years (Note that I have done research on these “other” changes, but chose not to include them in this paper for sake of length). How do these evolutions impact how we predict the success of a lineup today? To answer this question, I compared models created using all lineup data vs. only recent lineup data. 
+  I decided to use stepwise linear regression to create these models. Before creating a full model, I removed variables that would have no bearing on the prediction of efficiency differential. These included player names, teams, heights, draft year, games played, draft position, and nationality. This full model had very few significant predictors and a horrific Normal Q-Q Plot, as was to be expected. 
+
+```{r, include = FALSE}
+# Remove Rank Columns
+vec <- colnames(all_reg_lineups_minus_averages)
+list <- c()
+for (i in vec){
+  if (grepl("Rank", i) == T){
+    list <- c(list, i)
+  }
+}
+no_percentiles <- all_reg_lineups_minus_averages[,!(names(all_reg_lineups_minus_averages) %in% list)]
+```
+
+```{r, include = FALSE}
+# First full model
+fulldata <- subset(no_percentiles, select = -c(Regular.Season.or.Playoffs, Year, Team, PG, SG, SF, PF, C, PG.Height, SG.Height, SF.Height, PF.Height, C.Height, PG.Draft.Year, SG.Draft.Year, SF.Draft.Year, PF.Draft.Year, C.Draft.Year, PG.GP, SG.GP, SF.GP, PF.GP, C.GP, PG.Draft.Pick, SG.Draft.Pick, SF.Draft.Pick, PF.Draft.Pick, C.Draft.Pick, PG.Nationality, SG.Nationality, SF.Nationality, PF.Nationality, C.Nationality))
+full <- lm(Diff~., fulldata)
+# Summary table of first full model
+summary(full)
+```
+
+```{r, echo = FALSE}
+plot(full, c(1:2))
+```
+
+  So, I ran stepwise regression (in both directions) on this full model to establish a base model. This regression selected 23 predictors, each of which was significant or close to significant at the .01 level.
+
+```{r, include = FALSE}
+# Create stepwise of full model
+full1.5 <- lm(Diff~., full$model)
+step1 <- step(full1.5, trace = F)
+```
+
+```{r, echo = FALSE}
+summary(step1)
+```
+
+  However, the Normal Q-Q and residuals vs. fitted plots still had not improved. Additionally, there were alarming variance inflation factors for all frequency-related statistics. This was likely due to multicollinearity or non-essential columns.
+
+```{r, echo = FALSE}
+plot(step1)
+vif(step1)
+```
+
+  To absolve this, I removed effective field goal percentage, offensive and defensive points per possession, and the columns that were a sum of location frequencies (i.e. All Three Frequency being a sum of Corner and Non-Corner Three Frequency). After doing so, we are much closer to meeting the conditions for a linear model. The residuals seem to be evenly clustered around zero, and the linearity is acceptable enough to proceed with a second stepwise function.
+
+```{r, include = FALSE}
+# Remove variables
+mid_data <- subset(fulldata, select = -c(OFFENSE..Pts.Poss, DEFENSE..Pts.Poss, Poss, OFFENSE..All.Three.Frequency, OFFENSE..eFG., DEFENSE..eFG., DEFENSE.OFF.STEALS.TRANSITION..Pts.Play, PUTBACKS..Plays.Miss, DEFENSE.PUTBACKS..Plays.Miss))
+
+# Second full model
+full2 <- lm(Diff~., mid_data)
+```
+
+```{r, echo = FALSE}
+plot(full2, c(1:2))
+```
+
+```{r, include = FALSE}
+# Second stepwise
+full2.5 <- lm(Diff~., full2$model)
+step2 <- step(full2.5, trace = F)
+```
+
+The predictors of this model are as follows:
+
+```{r, echo = FALSE}
+summary(step2)
+```
+
+  Nearly all of the predictors are significant at a .05 level. The multiple R-Squared of 0.9557 is very encouraging as well. There are no VIFs above 9, the ANOVA suggests that all predictors carry importance, and we have no significant outliers within reach of Cook’s Distance.
+
+```{r, echo = FALSE}
+plot(step2, c(1:2, 4))
+vif(step2)
+anova(step2)
+```
+
+  I then preceded to make the model for recent NBA history, which I considered to be from 2014 to 2022. I used the same process as above - stepwise regression. Shockingly, the models ended up being very similar aside from two major predictors: offensive 3-point percentage and offensive rim field goal percentage were absent from the “recent” NBA model.
+
+```{r, include = FALSE}
+# Model for 2022.
+data2022 <- subset(no_percentiles, select = -c(Regular.Season.or.Playoffs, Team, PG, SG, SF, PF, C, PG.Height, SG.Height, SF.Height, PF.Height, C.Height, PG.Draft.Year, SG.Draft.Year, SF.Draft.Year, PF.Draft.Year, C.Draft.Year, PG.GP, SG.GP, SF.GP, PF.GP, C.GP, PG.Draft.Pick, SG.Draft.Pick, SF.Draft.Pick, PF.Draft.Pick, C.Draft.Pick, PG.Nationality, SG.Nationality, SF.Nationality, PF.Nationality, C.Nationality, OFFENSE..Pts.Poss, DEFENSE..Pts.Poss, Poss, OFFENSE..All.Three.Frequency, OFFENSE..eFG., DEFENSE..eFG., DEFENSE.OFF.STEALS.TRANSITION..Pts.Play, PUTBACKS..Plays.Miss, DEFENSE.PUTBACKS..Plays.Miss)) %>%
+  filter(Year >= 2014)
+
+full2022 <- lm(Diff~., data2022)
+full2022.5 <- lm(Diff~., full2022$model)
+step2022 <- step(full2022.5, trace = F)
+
+step2022 <- update(step2022, .~. -DEFENSE..Rim.Frequency)
+step2022 <- update(step2022, .~. -C.Age)
+step2022 <- update(step2022, .~. -C.Experience)
+```
+
+```{r, echo = FALSE}
+summary(step2022)
+```
+
+  I believe this is because many NBA teams now prioritize shooting, meaning that the spread of 3 point percentage between lineups has decreased. Therefore, its significance was removed from the model. Thus, the other predictors in the model gain more importance (as seen when comparing the estimate values between the models). While I thought 3 point percentage would see an increase in importance when predicting recent NBA history due to the spike in attempts per game, I can also see why its significance has lowered. 
+  As for the predictors that are used in my model, there is a heavy emphasis on offensive rebounds, turnovers, and transition. Shot locations are significant but have a smaller importance to the model. One surprising predictor present in both models that surprised me was average height; the model favors lineups with smaller average height levels. A few NBA teams have experimented with “small-ball” to increase efficiency, but I believe it has not been done enough, and the model agrees. However, using smaller players may also subject the lineup to a lack of rebounding, and therefore opportunities in transition. 
+
+```{r, include = FALSE}
+# Predict on 2022 data
+data2023 <- subset(no_percentiles, Year == 2022)
+
+mean(abs(step2$residuals))
+median(abs(step2$residuals))
+predictions <- predict(step2, data2023) - data2023$Diff
+mean(abs(predictions))
+median(abs(predictions))
+mean(abs(step2022$residuals))
+median(abs(step2022$residuals))
+```
+
+  Lastly, I wanted to evaluate the effectiveness of the two models in predicting current-day NBA lineups. When predicting on data from 2004-2022, the first model had an average residual of +/- 2.17 with a median of +/-1.63 (overall very successful considering the distribution of efficiency differentials typically spreads from -15 to 15). However, when predicting on data from this current NBA season (2022-2023), the first model had an average residual +/- 2.66 with a median of +/-1.99, meaning the model performs slightly worse on current data. The second model, designed specifically for recent NBA history, had an average residual of 2.39 with a median residual of +/-1.83. Therefore, by a slim margin, the second model would be preferable to use on current data, even without the presence of 3 point percentage as a predictor. This suggests that the modeling procedures for analyzing the NBA must change, and researchers must be careful when using non-recent data to predict the future success of lineups. Not only can my model be used to analyze this success, but can be used as evidence for the shift in the dynamic of the NBA.
+
